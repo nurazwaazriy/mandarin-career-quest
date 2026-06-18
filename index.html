@@ -85,7 +85,7 @@
 
         .hud-title {
             font-family: var(--font-pixel);
-            font-size: 7px;
+            font-size: 9px; /* Membesarkan saiz teks agar lebih mudah dibaca */
             text-align: center;
             color: #7a5e4a;
             margin-bottom: 8px;
@@ -205,8 +205,8 @@
             border: 2px solid var(--border);
             border-radius: 4px;
             font-family: var(--font-pixel);
-            font-size: 8px;
-            padding: 2px 8px;
+            font-size: 10px; /* Diperbesarkan sedikit untuk keselesaan mata */
+            padding: 3px 10px;
             margin-top: -6px;
             font-weight: bold;
         }
@@ -272,7 +272,7 @@
 
         .quest-chapter {
             font-family: var(--font-pixel);
-            font-size: 7px;
+            font-size: 9px; /* Diperbesarkan sedikit untuk keterbacaan yang lebih baik */
             color: var(--secondary);
             text-align: center;
             margin-bottom: 4px;
@@ -338,7 +338,7 @@
             border-radius: 1px;
         }
 
-        /* BUTTONS */
+        /* BUTTONS - RETUNED FOR MAX ACCESSIBILITY AND BIGGER TEXT ON MOBILE */
         .btn-action {
             display: block;
             width: 100%;
@@ -346,8 +346,9 @@
             background: var(--primary);
             border: 3px solid var(--border);
             border-radius: 10px;
-            font-family: var(--font-pixel);
-            font-size: 9px;
+            font-family: var(--font-main); /* Menggunakan Font Utama (Quicksand) untuk kejelasan visual */
+            font-size: 16px; /* Teks yang jauh lebih besar dan selesa dibaca */
+            font-weight: 800; /* Super Bold */
             color: var(--border);
             cursor: pointer;
             box-shadow: 0 4px 0 var(--border);
@@ -355,6 +356,7 @@
             text-decoration: none;
             margin-top: 16px;
             user-select: none;
+            letter-spacing: 0.5px;
         }
 
         .btn-action:hover {
@@ -371,7 +373,7 @@
         .btn-proceed {
             background: var(--accent) !important;
             color: var(--text) !important;
-            font-weight: bold;
+            font-weight: 800 !important;
         }
 
         /* TRANSITION LOADER VIEW */
@@ -422,7 +424,7 @@
 
         .badge-tag {
             font-family: var(--font-pixel);
-            font-size: 7px;
+            font-size: 9px; /* Diperbesarkan sedikit */
             color: #b45309;
             margin-bottom: 2px;
         }
