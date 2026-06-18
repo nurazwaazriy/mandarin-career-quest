@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MANDARIN CAREER QUEST™</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #F8D64E;
+            --secondary: #4CB4FF;
+            --accent: #5CD65C;
+            --bg: #F4F1E8;
+            --text: #2E2E2E;
+            --border: #4a3525;
+            --panel-bg: #FCFBF7;
+            --font-pixel: 'Press Start 2P', monospace;
+            --font-main: 'Quicksand', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-image: radial-gradient(var(--border) 1px, transparent 1px);
+            background-size: 20px 20px;
+            padding: 12px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+
+        /* QUEST PROGRESSION HUD MAP */
+        .quest-map-hud {
+            background: var(--panel-bg);
+            border: 3px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        }
+
+        .hud-title {
+            font-family: var(--font-pixel);
+            font-size: 7px;
+            text-align: center;
+            color: #7a5e4a;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .map-timeline-horizontal {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            padding: 0 8px;
+        }
+
+        .map-timeline-horizontal::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            right: 20px;
+            height: 4px;
+            background: rgba(74, 53, 37, 0.15);
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .hud-step {
+            position: relative;
+            z-index: 2;
+            width: 34px;
+            height: 34px;
+            background: #fff;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .hud-step.completed {
+            background: var(--accent) !important;
+            border-color: var(--border);
+        }
+
+        .hud-step.active {
+            background: var(--primary);
+            transform: scale(1.15);
+            animation: pulse-glow 1.5s infinite;
+        }
+
+        .hud-label-popup {
+            position: absolute;
+            bottom: -18px;
+            font-size: 8px;
+            font-weight: 800;
+            white-space: nowrap;
+            color: var(--text);
+            display: none;
+        }
+
+        .hud-step.active .hud-label-popup {
+            display: block;
+        }
+
+        /* MAIN PANEL WITH FADE TRANSITIONS */
+        .main-panel {
+            background: var(--panel-bg);
+            border: 4px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 6px 0 rgba(74, 53, 37, 0.2);
+            position: relative;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .main-panel.fade-out {
+            opacity: 0;
+            transform: translateY(4px);
+        }
+
+        /* XP NOTIFICATION POPUP */
+        .xp-popup {
+            position: absolute;
+            top: -20px;
+            right: 20px;
+            background: #4ade80;
+            color: var(--text);
+            border: 2px solid var(--border);
+            font-family: var(--font-pixel);
+            font-size: 10px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 0 var(--border);
+            animation: bounceUp 1.2s ease-out forwards;
+            display: none;
+            z-index: 99;
+        }
+
+        /* XANXAN AVATAR BOX */
+        .character-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .sprite-xanxan {
+            width: 85px;
+            height: 95px;
+            animation: float 2.5s ease-in-out infinite;
+        }
+
+        .name-tag {
+            background: var(--primary);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            font-family: var(--font-pixel);
+            font-size: 8px;
+            padding: 2px 8px;
+            margin-top: -6px;
+            font-weight: bold;
+        }
+
+        .dialogue-bubble {
+            background: #fff;
+            border: 3px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            position: relative;
+            min-height: 65px;
+        }
+
+        .dialogue-text {
+            font-size: 13.5px;
+            line-height: 1.5;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .decorative-flavor {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed rgba(74, 53, 37, 0.15);
+        }
+
+        .flavor-cn {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d32f2f;
+        }
+
+        .flavor-py {
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* SCREEN MANAGEMENT */
+        .game-screen { display: none; }
+        .game-screen.active { display: block; }
+
+        /* TITLES & LABELS */
+        .screen-title {
+            font-family: var(--font-pixel);
+            font-size: 14px;
+            text-align: center;
+            color: var(--border);
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+
+        .screen-subtitle {
+            font-size: 12px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .quest-chapter {
+            font-family: var(--font-pixel);
+            font-size: 7px;
+            color: var(--secondary);
+            text-align: center;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .quest-prompt {
+            font-size: 14px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        /* INTERACTIVE OPTIONS */
+        .options-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-node {
+            background: #fff;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 3px 0 var(--border);
+            transition: all 0.1s ease;
+        }
+
+        .option-node:hover {
+            background: #fffdf6;
+        }
+
+        .option-node.selected {
+            background: #fff9db;
+            border-color: var(--border);
+        }
+
+        .bullet-box {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            background: var(--bg);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .option-node.selected .bullet-box::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+
+        /* BUTTONS */
+        .btn-action {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            border: 3px solid var(--border);
+            border-radius: 10px;
+            font-family: var(--font-pixel);
+            font-size: 9px;
+            color: var(--border);
+            cursor: pointer;
+            box-shadow: 0 4px 0 var(--border);
+            text-align: center;
+            text-decoration: none;
+            margin-top: 16px;
+            user-select: none;
+        }
+
+        .btn-action:hover {
+            transform: translateY(1px);
+            box-shadow: 0 3px 0 var(--border);
+        }
+
+        .btn-action:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        /* HIGH STRIKING PROGRESSION BUTTON (GREEN BG / BLACK TEXT) */
+        .btn-proceed {
+            background: var(--accent) !important;
+            color: var(--text) !important;
+            font-weight: bold;
+        }
+
+        /* TRANSITION LOADER VIEW */
+        .transition-loading-view {
+            text-align: center;
+            padding: 40px 0;
+            font-family: var(--font-pixel);
+            font-size: 10px;
+            color: var(--border);
+            animation: pulse-text 0.8s infinite alternate;
+        }
+
+        /* LOADER VIEW */
+        .loader-layout {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .loading-icon {
+            font-size: 32px;
+            animation: spin 1.5s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+            margin-bottom: 12px;
+        }
+
+        .loading-msg {
+            font-family: var(--font-pixel);
+            font-size: 8px;
+            color: #7a5e4a;
+            margin-top: 8px;
+            min-height: 24px;
+        }
+
+        /* RESULTS VIEW */
+        .achievement-header {
+            text-align: center;
+            margin-bottom: 14px;
+            animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .badge-box {
+            background: var(--primary);
+            border: 3px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            display: inline-block;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        }
+
+        .badge-tag {
+            font-family: var(--font-pixel);
+            font-size: 7px;
+            color: #b45309;
+            margin-bottom: 2px;
+        }
+
+        .badge-main {
+            font-family: var(--font-pixel);
+            font-size: 12px;
+            color: var(--border);
+        }
+
+        .rec-container {
+            background: white;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 14px 0;
+            text-align: center;
+        }
+
+        .rec-lbl {
+            font-family: var(--font-pixel);
+            font-size: 7px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .rec-val {
+            font-weight: 800;
+            font-size: 13px;
+            color: var(--border);
+        }
+
+        /* ANIMATIONS */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0px rgba(248, 214, 78, 0.7); }
+            100% { box-shadow: 0 0 0 6px rgba(248, 214, 78, 0); }
+        }
+        @keyframes bounceUp {
+            0% { transform: translateY(15px); opacity: 0; }
+            30% { transform: translateY(-5px); opacity: 1; }
+            70% { transform: translateY(-5px); opacity: 1; }
+            100% { transform: translateY(-25px); opacity: 0; }
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes scaleUp {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse-text {
+            from { opacity: 0.4; }
+            to { opacity: 1; }
+        }
+
+        footer {
+            text-align: center;
+            color: #888;
+            margin-top: 12px;
+            font-family: var(--font-pixel);
+            font-size: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        
+        <!-- QUEST PROGRESSION HUD MAP -->
+        <div class="quest-map-hud">
+            <div class="hud-title">QUEST PROGRESSION</div>
+            <div class="map-timeline-horizontal">
+                <div class="hud-step active" id="hud-1">🏠<span class="hud-label-popup">Village</span></div>
+                <div class="hud-step" id="hud-2">🧭<span class="hud-label-popup">Explorer</span></div>
+                <div class="hud-step" id="hud-3">⚔️<span class="hud-label-popup">Growth</span></div>
+                <div class="hud-step" id="hud-4">🎓<span class="hud-label-popup">Professional</span></div>
+                <div class="hud-step" id="hud-5">🏆<span class="hud-label-popup">Advantage</span></div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTAINER PANEL -->
+        <main class="main-panel" id="primary-panel">
+            <div class="xp-popup" id="xp-alert">+20 XP</div>
+
+            <!-- XANXAN AVATAR BOX -->
+            <div class="character-section" id="xanxan-avatar">
+                <svg class="sprite-xanxan" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="25" y="15" width="50" height="55" rx="6" fill="#4a3525" />
+                    <rect x="28" y="18" width="44" height="22" fill="#583c27" />
+                    <rect x="28" y="32" width="8" height="12" fill="#583c27" />
+                    <rect x="64" y="32" width="8" height="12" fill="#583c27" />
+                    <rect x="32" y="22" width="6" height="6" fill="#F8D64E" />
+                    <rect x="62" y="22" width="6" height="6" fill="#F8D64E" />
+                    <rect x="34" y="36" width="32" height="24" fill="#FFDFC4" />
+                    <rect x="36" y="46" width="4" height="4" fill="#FFA3A1" />
+                    <rect x="60" y="46" width="4" height="4" fill="#FFA3A1" />
+                    <rect x="40" y="42" width="4" height="6" fill="#2E2E2E" />
+                    <rect x="56" y="42" width="4" height="6" fill="#2E2E2E" />
+                    <rect x="48" y="50" width="4" height="2" fill="#d32f2f" />
+                    <rect x="28" y="64" width="44" height="26" rx="4" fill="#4CB4FF" />
+                    <rect x="38" y="64" width="24" height="26" fill="#F8D64E" />
+                    <rect x="48" y="68" width="4" height="16" fill="#4a3525" />
+                    <rect x="20" y="72" width="8" height="8" fill="#FFDFC4" />
+                    <rect x="72" y="72" width="8" height="8" fill="#FFDFC4" />
+                    <rect x="34" y="90" width="12" height="6" fill="#4a3525" />
+                    <rect x="54" y="90" width="12" height="6" fill="#4a3525" />
+                </svg>
+                <div class="name-tag">XanXan</div>
+            </div>
+
+            <!-- RETRO DIALOGUE BUBBLE -->
+            <div class="dialogue-bubble" id="xanxan-dialogue-bubble">
+                <div class="dialogue-text" id="dialogue-target">Loading...</div>
+                <div class="decorative-flavor" id="dialogue-addon">
+                    <span class="flavor-cn" id="flavor-hanzi">欢迎</span>
+                    <span class="flavor-py" id="flavor-pinyin">Huān yíng</span>
+                </div>
+            </div>
+
+            <!-- ================= INTER-QUEST TRANSITION SCREEN ================= -->
+            <div id="scr-transition" class="game-screen">
+                <div class="transition-loading-view">
+                    ⏳ LOADING NEXT QUEST...
+                </div>
+            </div>
+
+            <!-- ================= SCREEN 0: OPENING ================= -->
+            <div id="scr-open" class="game-screen active">
+                <h1 class="screen-title">MANDARIN CAREER QUEST™</h1>
+                <p class="screen-subtitle">Unlock Your Next Career Adventure</p>
+                <button class="btn-action" onclick="goToQuest1()">START QUEST</button>
+            </div>
+
+            <!-- ================= SCREEN 1: QUEST 1 ================= -->
+            <div id="scr-q1" class="game-screen">
+                <div class="quest-chapter">CHAPTER 1 • CURRENT STATUS</div>
+                <h2 class="quest-prompt">Apakah tahap Mandarin anda sekarang?</h2>
+                <div class="options-group">
+                    <div class="option-node" onclick="pickQ1(0, 'exp')"><div class="bullet-box"></div><span>Langsung tidak pernah belajar</span></div>
+                    <div class="option-node" onclick="pickQ1(1, 'exp')"><div class="bullet-box"></div><span>Pernah belajar tetapi sudah lupa</span></div>
+                    <div class="option-node" onclick="pickQ1(2, 'gro')"><div class="bullet-box"></div><span>Faham sedikit</span></div>
+                    <div class="option-node" onclick="pickQ1(3, 'gro')"><div class="bullet-box"></div><span>Boleh berbual asas</span></div>
+                    <div class="option-node" onclick="pickQ1(4, 'gro')"><div class="bullet-box"></div><span>Sedang belajar sekarang</span></div>
+                </div>
+                <button class="btn-action btn-proceed" id="btn-next-q1" style="display:none;" onclick="triggerQuestTransition(2)">Proceed To Next Quest</button>
+            </div>
+
+            <!-- ================= SCREEN 2: QUEST 2 ================= -->
+            <div id="scr-q2" class="game-screen">
+                <div class="quest-chapter">CHAPTER 2 • CAREER ENVIRONMENT</div>
+                <h2 class="quest-prompt">Seberapa kerap anda berinteraksi dengan komuniti berbahasa Mandarin?</h2>
+                <div class="options-group">
+                    <div class="option-node" onclick="pickGeneric(2, 0)"><div class="bullet-box"></div><span>Hampir tiada</span></div>
+                    <div class="option-node" onclick="pickGeneric(2, 1)"><div class="bullet-box"></div><span>Kadang-kadang</span></div>
+                    <div class="option-node" onclick="pickGeneric(2, 2)"><div class="bullet-box"></div><span>Kerap</span></div>
+                    <div class="option-node" onclick="pickGeneric(2, 3)"><div class="bullet-box"></div><span>Sangat kerap</span></div>
+                </div>
+                <button class="btn-action btn-proceed" id="btn-next-q2" style="display:none;" onclick="triggerQuestTransition(3)">Proceed To Next Quest</button>
+            </div>
+
+            <!-- ================= SCREEN 3: QUEST 3 ================= -->
+            <div id="scr-q3" class="game-screen">
+                <div class="quest-chapter">CHAPTER 3 • REAL WORLD ENCOUNTERS</div>
+                <h2 class="quest-prompt">Pernah rasa 'Kalaulah aku faham Mandarin...'? (Boleh pilih > 1)</h2>
+                <div class="options-group">
+                    <div class="option-node" onclick="toggleCheckbox(this)"><div class="bullet-box"></div><span>Jumpa iklan kerja "Mandarin Preferred"</span></div>
+                    <div class="option-node" onclick="toggleCheckbox(this)"><div class="bullet-box"></div><span>Client lebih selesa guna Mandarin</span></div>
+                    <div class="option-node" onclick="toggleCheckbox(this)"><div class="bullet-box"></div><span>Rasa rugi sebab tak faham perbualan</span></div>
+                    <div class="option-node" onclick="toggleCheckbox(this)"><div class="bullet-box"></div><span>Mahu tambah nilai diri</span></div>
+                    <div class="option-node" onclick="toggleCheckbox(this)"><div class="bullet-box"></div><span>Mahu lebih banyak peluang</span></div>
+                </div>
+                <button class="btn-action btn-proceed" onclick="triggerQuestTransition(4)">Proceed To Next Quest</button>
+            </div>
+
+            <!-- ================= SCREEN 4: QUEST 4 ================= -->
+            <div id="scr-q4" class="game-screen">
+                <div class="quest-chapter">CHAPTER 4 • FUTURE AMBITION</div>
+                <h2 class="quest-prompt">Yang mana paling memberi manfaat kepada anda?</h2>
+                <div class="options-group">
+                    <div class="option-node" onclick="pickGeneric(4, 0)"><div class="bullet-box"></div><span>Peluang kerjaya</span></div>
+                    <div class="option-node" onclick="pickGeneric(4, 1)"><div class="bullet-box"></div><span>Networking</span></div>
+                    <div class="option-node" onclick="pickGeneric(4, 2)"><div class="bullet-box"></div><span>Komunikasi</span></div>
+                    <div class="option-node" onclick="pickGeneric(4, 3)"><div class="bullet-box"></div><span>Qualification</span></div>
+                    <div class="option-node" onclick="pickGeneric(4, 4)"><div class="bullet-box"></div><span>Peluang perniagaan</span></div>
+                </div>
+                <button class="btn-action btn-proceed" id="btn-next-q4" style="display:none;" onclick="triggerQuestTransition(5)">Proceed To Next Quest</button>
+            </div>
+
+            <!-- ================= SCREEN 5: QUEST 5 ================= -->
+            <div id="scr-q5" class="game-screen">
+                <div class="quest-chapter">CHAPTER 5 • CAREER DESTINATION</div>
+                <h2 class="quest-prompt">Apakah matlamat utama anda sekarang?</h2>
+                <div class="options-group">
+                    <div class="option-node" onclick="pickGeneric(5, 0)"><div class="bullet-box"></div><span>Upgrade kerjaya</span></div>
+                    <div class="option-node" onclick="pickGeneric(5, 1)"><div class="bullet-box"></div><span>Tambah nilai resume</span></div>
+                    <div class="option-node" onclick="pickGeneric(5, 2)"><div class="bullet-box"></div><span>Bina keyakinan</span></div>
+                    <div class="option-node" onclick="pickGeneric(5, 3)"><div class="bullet-box"></div><span>Peluang baru</span></div>
+                    <div class="option-node" onclick="pickGeneric(5, 4)"><div class="bullet-box"></div><span>Persediaan masa depan</span></div>
+                </div>
+                <button class="btn-action btn-proceed" id="btn-next-q5" style="display:none;" onclick="runAnalysis()">Complete Quest</button>
+            </div>
+
+            <!-- ================= SCREEN 6: ANALYSIS LOADER ================= -->
+            <div id="scr-analysis" class="game-screen">
+                <div class="loader-layout">
+                    <div class="loading-icon">⏳</div>
+                    <div class="screen-title" style="font-size: 11px;">MENGIRA POTENSI...</div>
+                    <div class="loading-msg" id="analysis-msg-ticker">Reviewing Quest Records...</div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN 7A: EXPLORER RESULT ================= -->
+            <div id="scr-res-explorer" class="game-screen">
+                <div class="achievement-header">
+                    <div class="badge-box">
+                        <div class="badge-tag">Achievement Unlocked</div>
+                        <div class="badge-main" style="color: #0284c7;">🧭 EXPLORER PATH</div>
+                    </div>
+                </div>
+                <div class="rec-container">
+                    <div class="rec-lbl">LANGKAH SETERUSNYA YANG DISYORKAN:</div>
+                    <div class="rec-val">AMAZING MANDARIN CONVERSATION CLASS (AMCO)</div>
+                </div>
+                <a href="https://wa.me/60162938505?text=Hi%20Azwa,%20saya%20telah%20melengkapkan%20Mandarin%20Career%20Quest™%20dan%20mendapat%20Explorer%20Path.%20Saya%20berminat%20untuk%20sertai%20AMCO." target="_blank" class="btn-action btn-proceed">
+                    🚀 CLAIM MY AMCO SLOT
+                </a>
+            </div>
+
+            <!-- ================= SCREEN 7B: GROWTH RESULT ================= -->
+            <div id="scr-res-growth" class="game-screen">
+                <div class="achievement-header">
+                    <div class="badge-box" style="background: var(--accent);">
+                        <div class="badge-tag" style="color: #047857;">Achievement Unlocked</div>
+                        <div class="badge-main" style="color: white;">⚔️ GROWTH PATH</div>
+                    </div>
+                </div>
+                <div class="rec-container">
+                    <div class="rec-lbl">LANGKAH SETERUSNYA YANG DISYORKAN:</div>
+                    <div class="rec-val">ONLINE KUNKWAN BRIEFING TOUR (OKTB)</div>
+                </div>
+                <a href="https://wa.me/60162938505?text=Hi%20Azwa,%20saya%20telah%20melengkapkan%20Mandarin%20Career%20Quest™%20dan%20mendapat%20Growth%20Path.%20Saya%20berminat%20untuk%20claim%20slot%20OKTB." target="_blank" class="btn-action btn-proceed">
+                    🎯 CLAIM MY OKTB SLOT
+                </a>
+            </div>
+
+        </main>
+
+        <footer>
+            © 2026 MANDARIN CAREER QUEST™
+        </footer>
+    </div>
+
+    <!-- GRAPHICS & ENGINE CORE SCRIPT -->
+    <script>
+        // ===================================================================
+        // 🛠️ CONFIGURATION PACING PANEL (UBAH TEMPOH PACING DI SINI SE CARA MANUAL)
+        // ===================================================================
+        const GAME_CONFIG = {
+            transitionDelay: 2200,  // Durasi skrin loading antara soalan (milisaat) -> 2200 = 2.2 saat
+            analysisDelay: 3200     // Total durasi skrin pengiraan keputusan akhir (milisaat) -> 3200 = 3.2 saat
+        };
+        // ===================================================================
+
+        let scoreExplorer = 0;
+        let scoreGrowth = 0;
+        let finalPathDetermined = 'explorer';
+
+        // DIALOGUE DATA WITH SHORT PINYIN AND TRANSLATIONS
+        const dialogueDataset = {
+            open: {
+                txt: "Hai! Saya XanXan. 👋 Selamat datang ke Mandarin Career Quest™. Setiap orang bermula dari tempat yang berbeza. Ada yang baru nak mula. Ada yang dah ada asas dan nak pergi lebih jauh. Jom kita tengok di mana perjalanan anda bermula.",
+                hz: "欢迎", py: "Huan Ying = Welcome / Selamat Datang"
+            },
+            q1: {
+                txt: "Mula-mula sekali, saya nak kenal anda sikit. Jangan risau, tak ada jawapan betul atau salah. 😆",
+                hz: "你好", py: "Ni Hao = Hello / Apa Khabar"
+            },
+            q2: {
+                txt: "Hmm... Sekarang saya nak tahu pula tentang dunia pekerjaan anda. Kadang-kadang peluang tu dah ada depan mata, cuma kita tak perasan je.",
+                hz: "进步", py: "Jìnbù = Progress / Kemajuan"
+            },
+            q3: {
+                txt: "Saya nak tanya satu benda. Pernah tak anda rasa macam: 'Kalaulah aku faham Mandarin masa tu...' 😅",
+                hz: "没关系", py: "Mei Guan Xi = It's OK / Tidak Mengapa"
+            },
+            q4: {
+                txt: "Katakan hari ni anda boleh unlock satu skill baru. Yang mana paling memberi manfaat kepada anda?",
+                hz: "加油", py: "Jia You = Keep It Up / Semangat!"
+            },
+            q5: {
+                txt: "Ok. Saya rasa saya dah mula nampak gambaran besar. Soalan terakhir sebelum kita tengok keputusan.",
+                hz: "完美", py: "Wan Mei = Perfect / Sempurna"
+            },
+            analysis: {
+                txt: "Memproses rekod pengembaraan kerjaya anda... Sila tunggu sebentar.",
+                hz: "等一下", py: "Deng Yi Xia = Wait a minute / Tunggu Sekejap"
+            },
+            resExplorer: {
+                txt: "Nice! 🎉 Berdasarkan perjalanan tadi, anda berada dalam Explorer Path. Ini biasanya laluan mereka yang sedang membina asas yang kukuh. Dan percaya atau tidak... Ramai yang bermula di sini sebelum bergerak ke tahap yang lebih tinggi.",
+                hz: "恭喜", py: "Gong Xi = Congratulations / Tahniah"
+            },
+            resGrowth: {
+                txt: "Wah, menarik. 👀 Anda dah ada asas yang boleh dikembangkan dengan lebih strategik. Saya rasa anda akan mendapat manfaat jika kita berbincang tentang hala tuju yang sesuai untuk perjalanan seterusnya.",
+                hz: "很棒", py: "Hen Bang = Great / Hebat!"
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderDialogue('open');
+        });
+
+        function renderDialogue(key) {
+            const node = dialogueDataset[key];
+            document.getElementById('dialogue-target').textContent = node.txt;
+            document.getElementById('flavor-hanzi').textContent = node.hz;
+            document.getElementById('flavor-pinyin').textContent = node.py;
+        }
+
+        function triggerXpGain() {
+            const xp = document.getElementById('xp-alert');
+            xp.style.display = 'block';
+            setTimeout(() => { xp.style.display = 'none'; }, 1200);
+        }
+
+        function shiftScreen(screenId) {
+            document.querySelectorAll('.game-screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goToQuest1() {
+            shiftScreen('scr-q1');
+            renderDialogue('q1');
+            updateMapHud(1);
+        }
+
+        function pickQ1(index, pathType) {
+            const nodes = document.querySelectorAll('#scr-q1 .option-node');
+            nodes.forEach((n, idx) => n.classList.toggle('selected', idx === index));
+            
+            if(pathType === 'exp') { 
+                finalPathDetermined = 'explorer';
+            } else { 
+                finalPathDetermined = 'growth';
+            }
+            document.getElementById('btn-next-q1').style.display = 'block';
+        }
+
+        function pickGeneric(questNum, index) {
+            const nodes = document.querySelectorAll(`#scr-q${questNum} .option-node`);
+            nodes.forEach((n, idx) => n.classList.toggle('selected', idx === index));
+            document.getElementById(`btn-next-q${questNum}`).style.display = 'block';
+        }
+
+        function toggleCheckbox(element) {
+            element.classList.toggle('selected');
+        }
+
+        function triggerQuestTransition(targetQuestNum) {
+            triggerXpGain();
+            const panel = document.getElementById('primary-panel');
+            
+            // FASA 1: Fade-Out Panel Utama
+            panel.classList.add('fade-out');
+            
+            setTimeout(() => {
+                // Sembunyikan XanXan & Bubble Dialog semasa loading supaya fokus pada map
+                document.getElementById('xanxan-avatar').style.display = 'none';
+                document.getElementById('xanxan-dialogue-bubble').style.display = 'none';
+                
+                shiftScreen('scr-transition');
+                panel.classList.remove('fade-out');
+            }, 300);
+
+            // FASA 2: Kemas Kini Map Progression
+            document.getElementById('hud-1').className = 'hud-step completed';
+            if (finalPathDetermined === 'explorer') {
+                document.getElementById('hud-2').className = 'hud-step active';
+                document.getElementById('hud-3').className = 'hud-step';
+            } else {
+                document.getElementById('hud-2').className = 'hud-step completed';
+                document.getElementById('hud-3').className = 'hud-step active';
+            }
+
+            // FASA 3: Kembalikan Panel & Tunjuk Soalan Baru Selepas Delay Yang Ditentukan
+            setTimeout(() => {
+                panel.classList.add('fade-out');
+                setTimeout(() => {
+                    document.getElementById('xanxan-avatar').style.display = 'flex';
+                    document.getElementById('xanxan-dialogue-bubble').style.display = 'block';
+                    
+                    shiftScreen(`scr-q${targetQuestNum}`);
+                    renderDialogue(`q${targetQuestNum}`);
+                    panel.classList.remove('fade-out');
+                }, 150);
+            }, GAME_CONFIG.transitionDelay); // Menggunakan masa transitionDelay daripada GAME_CONFIG
+        }
+
+        function runAnalysis() {
+            triggerXpGain();
+            
+            document.getElementById('hud-1').className = 'hud-step completed';
+            if(finalPathDetermined === 'explorer') {
+                document.getElementById('hud-2').className = 'hud-step completed';
+                document.getElementById('hud-3').className = 'hud-step';
+            } else {
+                document.getElementById('hud-2').className = 'hud-step completed';
+                document.getElementById('hud-3').className = 'hud-step completed';
+            }
+
+            shiftScreen('scr-analysis');
+            renderDialogue('analysis');
+
+            const tickerElement = document.getElementById('analysis-msg-ticker');
+            
+            setTimeout(() => { tickerElement.textContent = "Calculating Career Potential... 📊"; }, 1000);
+            setTimeout(() => { tickerElement.textContent = "Unlocking Recommended Path... 🗝️"; }, 2000);
+
+            setTimeout(() => {
+                if (finalPathDetermined === 'explorer') {
+                    shiftScreen('scr-res-explorer');
+                    renderDialogue('resExplorer');
+                    
+                    document.getElementById('hud-1').className = 'hud-step completed';
+                    document.getElementById('hud-2').className = 'hud-step active';
+                    document.getElementById('hud-3').className = 'hud-step';
+                } else {
+                    shiftScreen('scr-res-growth');
+                    renderDialogue('resGrowth');
+                    
+                    document.getElementById('hud-1').className = 'hud-step completed';
+                    document.getElementById('hud-2').className = 'hud-step completed';
+                    document.getElementById('hud-3').className = 'hud-step active';
+                }
+            }, GAME_CONFIG.analysisDelay); // Menggunakan masa analysisDelay daripada GAME_CONFIG
+        }
+
+        function updateMapHud(stepNumber) {
+            document.querySelectorAll('.hud-step').forEach(node => node.classList.remove('active'));
+            const current = document.getElementById(`hud-${stepNumber}`);
+            if(current) current.classList.add('active');
+        }
+    </script>
+</body>
+</html>
