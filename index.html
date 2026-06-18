@@ -49,12 +49,37 @@
             position: relative;
         }
 
-        /* QUEST PROGRESSION HUD MAP */
+        /* RETRO SOUND BUTTON STYLING */
+        .sound-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #fff;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 2px 0 var(--border);
+            z-index: 99;
+            transition: all 0.1s ease;
+        }
+
+        .sound-btn:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        /* QUEST PROGRESSION HUD MAP - FIXED PADDING TO PREVENT TEXT CLIPPING */
         .quest-map-hud {
             background: var(--panel-bg);
             border: 3px solid var(--border);
             border-radius: 12px;
-            padding: 10px;
+            padding: 10px 10px 22px 10px;
             box-shadow: 0 4px 0 rgba(0,0,0,0.1);
         }
 
@@ -486,6 +511,9 @@
         <main class="main-panel" id="primary-panel">
             <div class="xp-popup" id="xp-alert">+20 XP</div>
 
+            <!-- RETRO SOUND TOGGLE BUTTON -->
+            <button id="sound-toggle" class="sound-btn" onclick="toggleSound()">🔇</button>
+
             <!-- XANXAN AVATAR BOX -->
             <div class="character-section" id="xanxan-avatar">
                 <svg class="sprite-xanxan" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -656,20 +684,131 @@
 
     <!-- GRAPHICS & ENGINE CORE SCRIPT -->
     <script>
-        // ===================================================================
-        // 🛠️ CONFIGURATION PACING PANEL (UBAH TEMPOH PACING DI SINI SE CARA MANUAL)
-        // ===================================================================
         const GAME_CONFIG = {
-            transitionDelay: 2200,  // Durasi skrin loading antara soalan (milisaat) -> 2200 = 2.2 saat
-            analysisDelay: 3200     // Total durasi skrin pengiraan keputusan akhir (milisaat) -> 3200 = 3.2 saat
+            transitionDelay: 2200,  // Durasi skrin loading antara soalan
+            analysisDelay: 3200     // Total durasi skrin pengiraan keputusan
         };
-        // ===================================================================
 
+        // AUDIO SYNTH ENGINE (CHIPTUNE RPG STYLE)
+        let audioCtx = null;
+        let isMuted = true;
+        let bgmInterval = null;
+        let currentStep = 0;
+        const tempo = 150; // Kelajuan chiptune tempo gembira
+
+        // Pemetaan frekuensi muzik chiptune yang catchy
+        const FREQS = {
+            "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61, "G3": 196.00, "A3": 220.00, "B3": 246.94,
+            "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23, "G4": 392.00, "A4": 440.00, "B4": 493.88,
+            "C5": 523.25, "D5": 587.33, "E5": 659.25, "F5": 698.46, "G5": 783.99, "A5": 880.00, "B5": 987.77,
+            "C6": 1046.50, "D6": 1174.66, "E6": 1318.51, "G6": 1567.98
+        };
+
+        // Melodi utama yang ceria dan gembira
+        const melodyPattern = [
+            "E5", 0, "G5", "C6", 0, "B5", "A5", "G5",
+            "A5", 0, "F5", "A5", "G5", 0, "E5", 0,
+            "D5", "E5", "F5", "D5", "E5", "F5", "G5", "E5",
+            "A5", 0, "B5", "C6", "D6", 0, "E6", 0
+        ];
+
+        // Irama bass penggenap melodi utama
+        const bassPattern = [
+            "C3", 0, "C3", 0, "G3", 0, "G3", 0,
+            "F3", 0, "F3", 0, "C3", 0, "C3", 0,
+            "D3", 0, "D3", 0, "E3", 0, "E3", 0,
+            "F3", 0, "G3", 0, "C3", 0, "C3", 0
+        ];
+
+        function initAudio() {
+            try {
+                if (audioCtx) return;
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            } catch (e) {
+                console.warn("Audio Context tidak disokong pada pelayar ini:", e);
+            }
+        }
+
+        // Penjana bunyi synth chiptune lembut dengan fade-out automatik
+        function playNote(freq, type, volume, duration) {
+            try {
+                if (!audioCtx || audioCtx.state === 'suspended' || isMuted || !freq) return;
+                
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration - 0.01);
+                
+                osc.connect(gainNode);
+                // PEMBETULAN: gainNode (AudioNode) disambungkan ke destinasi, bukan gainNode.gain (AudioParam)
+                gainNode.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (err) {
+                console.error("Gagal menjana suara audio:", err);
+            }
+        }
+
+        function startRetroBgm() {
+            initAudio();
+            if (bgmInterval) return; 
+            
+            bgmInterval = setInterval(() => {
+                if (isMuted) return;
+                
+                try {
+                    if (audioCtx && audioCtx.state === 'suspended') {
+                        audioCtx.resume();
+                    }
+                    
+                    const melodyNote = melodyPattern[currentStep % melodyPattern.length];
+                    if (melodyNote && FREQS[melodyNote]) {
+                        playNote(FREQS[melodyNote], 'triangle', 0.08, 0.15);
+                    }
+
+                    const bassNote = bassPattern[currentStep % bassPattern.length];
+                    if (bassNote && FREQS[bassNote]) {
+                        playNote(FREQS[bassNote], 'sine', 0.12, 0.22);
+                    }
+                    
+                    currentStep++;
+                } catch (e) {
+                    console.error("Ralat kitaran run-time muzik:", e);
+                }
+            }, tempo);
+        }
+
+        function toggleSound() {
+            initAudio();
+            isMuted = !isMuted;
+            const btn = document.getElementById('sound-toggle');
+            if (isMuted) {
+                if (btn) btn.textContent = '🔇';
+            } else {
+                if (btn) btn.textContent = '🔊';
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                if (!bgmInterval) {
+                    startRetroBgm();
+                }
+            }
+        }
+
+        // GAME STATE DATA
         let scoreExplorer = 0;
         let scoreGrowth = 0;
         let finalPathDetermined = 'explorer';
 
-        // DIALOGUE DATA WITH SHORT PINYIN AND TRANSLATIONS
         const dialogueDataset = {
             open: {
                 txt: "Hai! Saya XanXan. 👋 Selamat datang ke Mandarin Career Quest™. Setiap orang bermula dari tempat yang berbeza. Ada yang baru nak mula. Ada yang dah ada asas dan nak pergi lebih jauh. Jom kita tengok di mana perjalanan anda bermula.",
@@ -715,23 +854,34 @@
 
         function renderDialogue(key) {
             const node = dialogueDataset[key];
-            document.getElementById('dialogue-target').textContent = node.txt;
-            document.getElementById('flavor-hanzi').textContent = node.hz;
-            document.getElementById('flavor-pinyin').textContent = node.py;
+            if (node) {
+                document.getElementById('dialogue-target').textContent = node.txt;
+                document.getElementById('flavor-hanzi').textContent = node.hz;
+                document.getElementById('flavor-pinyin').textContent = node.py;
+            }
         }
 
         function triggerXpGain() {
             const xp = document.getElementById('xp-alert');
-            xp.style.display = 'block';
-            setTimeout(() => { xp.style.display = 'none'; }, 1200);
+            if (xp) {
+                xp.style.display = 'block';
+                setTimeout(() => { xp.style.display = 'none'; }, 1200);
+            }
         }
 
         function shiftScreen(screenId) {
             document.querySelectorAll('.game-screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) targetScreen.classList.add('active');
         }
 
         function goToQuest1() {
+            // Aktifkan sistem audio retro dengan selamat
+            isMuted = false;
+            const btn = document.getElementById('sound-toggle');
+            if (btn) btn.textContent = '🔊';
+            startRetroBgm();
+            
             shiftScreen('scr-q1');
             renderDialogue('q1');
             updateMapHud(1);
@@ -746,102 +896,121 @@
             } else { 
                 finalPathDetermined = 'growth';
             }
-            document.getElementById('btn-next-q1').style.display = 'block';
+            const nextBtn = document.getElementById('btn-next-q1');
+            if (nextBtn) nextBtn.style.display = 'block';
         }
 
         function pickGeneric(questNum, index) {
             const nodes = document.querySelectorAll(`#scr-q${questNum} .option-node`);
             nodes.forEach((n, idx) => n.classList.toggle('selected', idx === index));
-            document.getElementById(`btn-next-q${questNum}`).style.display = 'block';
+            const nextBtn = document.getElementById(`btn-next-q${questNum}`);
+            if (nextBtn) nextBtn.style.display = 'block';
         }
 
         function toggleCheckbox(element) {
-            element.classList.toggle('selected');
+            if (element) element.classList.toggle('selected');
         }
 
         function triggerQuestTransition(targetQuestNum) {
             triggerXpGain();
             const panel = document.getElementById('primary-panel');
-            
-            // FASA 1: Fade-Out Panel Utama
-            panel.classList.add('fade-out');
+            if (panel) panel.classList.add('fade-out');
             
             setTimeout(() => {
-                // Sembunyikan XanXan & Bubble Dialog semasa loading supaya fokus pada map
-                document.getElementById('xanxan-avatar').style.display = 'none';
-                document.getElementById('xanxan-dialogue-bubble').style.display = 'none';
+                const avatar = document.getElementById('xanxan-avatar');
+                const bubble = document.getElementById('xanxan-dialogue-bubble');
+                if (avatar) avatar.style.display = 'none';
+                if (bubble) bubble.style.display = 'none';
                 
                 shiftScreen('scr-transition');
-                panel.classList.remove('fade-out');
+                if (panel) panel.classList.remove('fade-out');
             }, 300);
 
-            // FASA 2: Kemas Kini Map Progression
-            document.getElementById('hud-1').className = 'hud-step completed';
-            if (finalPathDetermined === 'explorer') {
-                document.getElementById('hud-2').className = 'hud-step active';
-                document.getElementById('hud-3').className = 'hud-step';
-            } else {
-                document.getElementById('hud-2').className = 'hud-step completed';
-                document.getElementById('hud-3').className = 'hud-step active';
-            }
+            // Keep HUD static at step 1 (Starting Village) during active questions
+            updateMapHud(1);
 
-            // FASA 3: Kembalikan Panel & Tunjuk Soalan Baru Selepas Delay Yang Ditentukan
             setTimeout(() => {
-                panel.classList.add('fade-out');
+                if (panel) panel.classList.add('fade-out');
                 setTimeout(() => {
-                    document.getElementById('xanxan-avatar').style.display = 'flex';
-                    document.getElementById('xanxan-dialogue-bubble').style.display = 'block';
+                    const avatar = document.getElementById('xanxan-avatar');
+                    const bubble = document.getElementById('xanxan-dialogue-bubble');
+                    if (avatar) avatar.style.display = 'flex';
+                    if (bubble) bubble.style.display = 'block';
                     
                     shiftScreen(`scr-q${targetQuestNum}`);
                     renderDialogue(`q${targetQuestNum}`);
-                    panel.classList.remove('fade-out');
-                }, 150);
-            }, GAME_CONFIG.transitionDelay); // Menggunakan masa transitionDelay daripada GAME_CONFIG
+                    updateMapHud(1); // Maintain Village active state during quiz
+                    if (panel) panel.classList.remove('fade-out');
+                }, 300);
+            }, GAME_CONFIG.transitionDelay);
+        }
+
+        function updateMapHud(stepNum) {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`hud-${i}`);
+                if (!el) continue;
+                if (i < stepNum) {
+                    el.className = 'hud-step completed';
+                } else if (i === stepNum) {
+                    el.className = 'hud-step active';
+                } else {
+                    el.className = 'hud-step';
+                }
+            }
         }
 
         function runAnalysis() {
             triggerXpGain();
+            const panel = document.getElementById('primary-panel');
+            if (panel) panel.classList.add('fade-out');
             
-            document.getElementById('hud-1').className = 'hud-step completed';
-            if(finalPathDetermined === 'explorer') {
-                document.getElementById('hud-2').className = 'hud-step completed';
-                document.getElementById('hud-3').className = 'hud-step';
-            } else {
-                document.getElementById('hud-2').className = 'hud-step completed';
-                document.getElementById('hud-3').className = 'hud-step completed';
-            }
-
-            shiftScreen('scr-analysis');
-            renderDialogue('analysis');
-
-            const tickerElement = document.getElementById('analysis-msg-ticker');
-            
-            setTimeout(() => { tickerElement.textContent = "Calculating Career Potential... 📊"; }, 1000);
-            setTimeout(() => { tickerElement.textContent = "Unlocking Recommended Path... 🗝️"; }, 2000);
-
             setTimeout(() => {
-                if (finalPathDetermined === 'explorer') {
-                    shiftScreen('scr-res-explorer');
-                    renderDialogue('resExplorer');
-                    
-                    document.getElementById('hud-1').className = 'hud-step completed';
-                    document.getElementById('hud-2').className = 'hud-step active';
-                    document.getElementById('hud-3').className = 'hud-step';
-                } else {
-                    shiftScreen('scr-res-growth');
-                    renderDialogue('resGrowth');
-                    
-                    document.getElementById('hud-1').className = 'hud-step completed';
-                    document.getElementById('hud-2').className = 'hud-step completed';
-                    document.getElementById('hud-3').className = 'hud-step active';
-                }
-            }, GAME_CONFIG.analysisDelay); // Menggunakan masa analysisDelay daripada GAME_CONFIG
-        }
+                const avatar = document.getElementById('xanxan-avatar');
+                const bubble = document.getElementById('xanxan-dialogue-bubble');
+                if (avatar) avatar.style.display = 'none';
+                if (bubble) bubble.style.display = 'none';
+                
+                shiftScreen('scr-analysis');
+                if (panel) panel.classList.remove('fade-out');
+                
+                const msgs = [
+                    "Reviewing Quest Records...",
+                    "Analyzing Response Profiles...",
+                    "Mapping Alignment Vectors...",
+                    "Finalizing Recommendation..."
+                ];
+                let msgIdx = 0;
+                const msgInterval = setInterval(() => {
+                    const ticker = document.getElementById('analysis-msg-ticker');
+                    if (msgIdx < msgs.length) {
+                        if (ticker) ticker.textContent = msgs[msgIdx];
+                        msgIdx++;
+                    }
+                }, GAME_CONFIG.analysisDelay / 4);
 
-        function updateMapHud(stepNumber) {
-            document.querySelectorAll('.hud-step').forEach(node => node.classList.remove('active'));
-            const current = document.getElementById(`hud-${stepNumber}`);
-            if(current) current.classList.add('active');
+                setTimeout(() => {
+                    clearInterval(msgInterval);
+                    if (panel) panel.classList.add('fade-out');
+                    setTimeout(() => {
+                        const avatar = document.getElementById('xanxan-avatar');
+                        const bubble = document.getElementById('xanxan-dialogue-bubble');
+                        if (avatar) avatar.style.display = 'flex';
+                        if (bubble) bubble.style.display = 'block';
+                        
+                        if (finalPathDetermined === 'explorer') {
+                            shiftScreen('scr-res-explorer');
+                            renderDialogue('resExplorer');
+                            updateMapHud(2); // Activates Step 2 (Explorer Path)
+                        } else {
+                            shiftScreen('scr-res-growth');
+                            renderDialogue('resGrowth');
+                            updateMapHud(3); // Activates Step 3 (Growth Path)
+                        }
+                        if (panel) panel.classList.remove('fade-out');
+                    }, 300);
+                }, GAME_CONFIG.analysisDelay);
+                
+            }, 300);
         }
     </script>
 </body>
